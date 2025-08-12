@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Peppol Toolbox",
+  "short_name": "Peppol",
+  "version": "0.1.1",
+  "description": "Peppol toolbox for Odoo",
+  "author": "Anton (roan)",
+  "homepage_url": "https://github.com/antonrom1/peppol-toolbox",
+  "host_permissions": [
+    "*://*.odoo.com/*",
+    "*://*.runbot.odoo.com/*",
+    "*://*.test.odoo.com/*",
+    "*://localhost/*",
+    "*://127.0.0.1/*"
+  ],
+  "icons": {
+    "128": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.odoo.com/*",
+        "*://*.runbot.odoo.com/*",
+        "*://*.test.odoo.com/*",
+        "*://localhost/*",
+        "*://127.0.0.1/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "toolbox/*.js",
+        "peppol.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": { "id": "peppol-toolbox@antonromanova.com" }
+  }
+}
