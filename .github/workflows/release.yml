@@ -1,0 +1,86 @@
+name: Build + Sign + Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      EXT_DIR: extension
+      DIST_DIR: dist
+      NAME: peppol-toolbox
+      WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+      WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from manifest.json
+        id: ver
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          echo "version=$(jq -r .version ${EXT_DIR}/manifest.json)" >> $GITHUB_OUTPUT
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install builders
+        run: |
+          npm i -g web-ext@8
+
+      - name: Prepare dist
+        run: |
+          rm -rf ${DIST_DIR}
+          mkdir -p ${DIST_DIR}
+
+      - name: Zip source
+        run: |
+          cd ${EXT_DIR}
+          zip -r -FS ../${DIST_DIR}/${NAME}-${{ steps.ver.outputs.version }}.zip . -x "*.DS_Store"
+
+      - name: Build unsigned Firefox .xpi
+        run: |
+          web-ext build \
+            -s ${EXT_DIR} \
+            -a ${DIST_DIR} \
+            --filename "${NAME}-${{ steps.ver.outputs.version }}-unsigned.xpi"
+
+      - name: Sign Firefox .xpi with AMO
+        run: |
+          web-ext sign \
+            --channel=unlisted \
+            -s ${EXT_DIR} \
+            -a ${DIST_DIR} \
+          || echo "::warning title=Firefox signing::web-ext sign failed (version may already exist). Continuing with unsigned XPI."
+
+      - name: Normalize signed filename
+        run: |
+          set -e
+          SIGNED=$(ls -t ${DIST_DIR}/*.xpi 2>/dev/null | grep -v "unsigned" || true)
+          if [ -n "$SIGNED" ]; then
+            mv "$SIGNED" "${DIST_DIR}/${NAME}-${{ steps.ver.outputs.version }}.xpi"
+          fi
+          ls -l ${DIST_DIR}
+
+      - name: Checksums
+        run: |
+          cd ${DIST_DIR}
+          shasum -a 256 * > SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/*
