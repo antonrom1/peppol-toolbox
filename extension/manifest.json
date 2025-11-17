@@ -2,14 +2,12 @@
   "manifest_version": 3,
   "name": "Peppol Toolbox",
   "short_name": "Peppol",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Peppol toolbox for Odoo",
   "author": "Anton (roan)",
   "homepage_url": "https://github.com/antonrom1/peppol-toolbox",
   "host_permissions": [
-    "*://*.odoo.com/*",
     "*://*.runbot.odoo.com/*",
-    "*://*.test.odoo.com/*",
     "*://localhost/*",
     "*://127.0.0.1/*"
   ],
@@ -19,9 +17,7 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.odoo.com/*",
         "*://*.runbot.odoo.com/*",
-        "*://*.test.odoo.com/*",
         "*://localhost/*",
         "*://127.0.0.1/*"
       ],

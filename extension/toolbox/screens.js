@@ -3,18 +3,26 @@ import { btn } from './utils.js';
 export function createScreens({ Store, View, api, refresh, to }) {
   function root() {
     const { installed, loading } = Store.get();
+    // don't suggest installing Peppol on SaaS / IAP / Prod (www.odoo.com)
+    const host = (window.odoo?.info?.domain ?? window.location.host).split(':')[0];
+    const isSaas = /^(?:[^.]+\.odoo\.com|[^.]+\.test\.odoo\.com)$/.test(host);
+    const suggestInstallPeppol = !isSaas && !installed;
     const headerBtn = btn(
       `${window.odoo.info.server_version}${installed ? '' : ' (peppol not installed)'}`,
       'fa-list',
       api.models
     );
 
-    const body = !installed
-      ? [btn('Install Peppol', 'fa-download', async () => { await api.install(); await refresh(); })]
-      : [
-        btn('Peppol Mode', 'fa-cogs', () => to('mode')),
-        btn(`Companies${loading ? ' …' : ''}`, 'fa-building', () => to('companies'))
-      ];
+    const extraButtons = [
+      btn('Peppol Mode', 'fa-cogs', () => to('mode')),
+      btn(`Companies${loading ? ' (loading)' : ''}`, 'fa-building', () => to('companies'))
+    ];
+
+    const body = installed
+      ? extraButtons
+      : suggestInstallPeppol
+        ? [btn('Install Peppol', 'fa-download', async () => { await api.install(); await refresh(); })]
+        : [btn('This is SaaS or IAP!', 'fa-exclamation-triangle', () => alert('Manage SaaS/IAP through settings! This plugin is for dev only!'))];
 
     const items = [headerBtn, ...body, btn('', 'fa-times-circle', () => View.panel.classList.remove('show'))];
 

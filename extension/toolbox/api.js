@@ -9,8 +9,20 @@ export function makeApi(orm, actionService, refresh) {
         .then(r => alert(r.map(m => m.model).join('\n'))),
 
     setMode: m =>
-      orm.call('ir.config_parameter', 'set_param', [], { key: 'account_peppol.edi.mode', value: m })
-        .then(() => alert(`Peppol mode set to ${m}`)),
+      // updated syntax in 19.1+ uses set_str, and up to 19.0 uses set_param, so we just read & write explicitly
+      orm.searchRead('ir.config_parameter', [['key', '=', 'account_peppol.edi.mode']], ['id', 'value'])
+        .then(res => {
+          const current = res[0]?.value;
+          if (current === m) {
+            alert(`Peppol mode is already set to ${m}`);
+            return;
+          }
+          orm.write('ir.config_parameter', [res[0].id], { value: m })
+            .then(() => {
+              alert(`Peppol mode set to ${m}`);
+              refresh();
+            });
+        }),
 
     install: async () => {
       const [id] = await orm.search('ir.module.module', [['name', '=', 'account_peppol']]);
@@ -45,6 +57,9 @@ export function makeApi(orm, actionService, refresh) {
     },
 
     companies: async () => {
+      if (!await api.installed())
+        return [];
+
       const rows = await orm.searchRead('res.company', [], ['name', 'account_peppol_proxy_state']);
       return Promise.all(rows.map(async r => {
         const eligible = await api.eligible(r.id);
